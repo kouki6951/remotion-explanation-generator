@@ -1,0 +1,122 @@
+{
+  "title": "サンプル解説動画",
+  "fps": 30,
+  "durationInFrames": 600,
+  "width": 1920,
+  "height": 1080,
+  "characters": {
+    "teacher": {
+      "name": "先生",
+      "defaultImage": "/characters/teacher-open.png",
+      "blinkImages": {
+        "halfClosed": "/characters/teacher-half.png",
+        "closed": "/characters/teacher-closed.png"
+      }
+    },
+    "assistant": {
+      "name": "アシスタント",
+      "defaultImage": "/characters/assistant-open.png",
+      "blinkImages": {
+        "halfClosed": "/characters/assistant-half.png",
+        "closed": "/characters/assistant-closed.png"
+      }
+    }
+  },
+  "scenes": [
+    {
+      "id": "opening",
+      "startFrame": 0,
+      "durationInFrames": 90,
+      "slide": {
+        "type": "text",
+        "content": "プログラミング入門",
+        "backgroundColor": "#1a1a2e",
+        "textColor": "#ffffff"
+      },
+      "subtitle": {
+        "text": "今日はプログラミングの基礎について学びましょう",
+        "color": "#ffffff",
+        "fontSize": 32
+      },
+      "character": {
+        "id": "teacher"
+      }
+    },
+    {
+      "id": "scene1",
+      "startFrame": 90,
+      "durationInFrames": 120,
+      "slide": {
+        "type": "text",
+        "content": "変数とは？",
+        "backgroundColor": "#16213e",
+        "textColor": "#ffffff"
+      },
+      "subtitle": {
+        "text": "変数はデータを格納するための箱のようなものです",
+        "color": "#ffffff",
+        "fontSize": 32
+      },
+      "character": {
+        "id": "teacher"
+      }
+    },
+    {
+      "id": "scene2",
+      "startFrame": 210,
+      "durationInFrames": 120,
+      "slide": {
+        "type": "text",
+        "content": "let x = 10;",
+        "backgroundColor": "#0f3460",
+        "textColor": "#00ff00"
+      },
+      "subtitle": {
+        "text": "このように変数xに数値10を代入できます",
+        "color": "#ffffff",
+        "fontSize": 32
+      },
+      "character": {
+        "id": "teacher"
+      }
+    },
+    {
+      "id": "scene3",
+      "startFrame": 330,
+      "durationInFrames": 90,
+      "slide": {
+        "type": "text",
+        "content": "なるほど！",
+        "backgroundColor": "#533483",
+        "textColor": "#ffffff"
+      },
+      "subtitle": {
+        "text": "変数を使うとデータを管理しやすくなりますね",
+        "color": "#ffffff",
+        "fontSize": 32
+      },
+      "character": {
+        "id": "assistant"
+      }
+    },
+    {
+      "id": "ending",
+      "startFrame": 420,
+      "durationInFrames": 180,
+      "slide": {
+        "type": "text",
+        "content": "まとめ",
+        "backgroundColor": "#1a1a2e",
+        "textColor": "#ffffff"
+      },
+      "subtitle": {
+        "text": "変数を使ってプログラミングを始めてみましょう！",
+        "color": "#ffffff",
+        "fontSize": 32
+      },
+      "character": {
+        "id": "teacher"
+      }
+    }
+  ]
+}
