@@ -6,6 +6,7 @@ Remotionを使用した自動動画作成システムです。台本やキャラ
 
 - **3分割レイアウト**: スライド、字幕、キャラクター立ち絵
 - **自動瞬きアニメーション**: キャラクターがリアルに瞬きします
+- **口パクアニメーション**: 音声再生時にキャラクターが口を動かします
 - **音声対応**: BGMとシーン毎のナレーション設定
 - **PDF表示**: PDFをスライドとして表示可能
 - **柔軟なカスタマイズ**: 背景、色、フォントなど自由に設定
@@ -58,6 +59,7 @@ movie/
 │   ├── ExplanationVideo.tsx  # メインコンポーネント
 │   ├── PdfSlide.tsx   # PDF表示コンポーネント
 │   ├── useBlinkAnimation.ts  # 瞬きアニメーション
+│   ├── useMouthAnimation.ts  # 口パクアニメーション
 │   └── Video.tsx      # Remotion設定
 ├── config.template.ts  # 設定ひな型（詳細版）
 ├── config.simple.ts    # 設定ひな型（シンプル版）
@@ -127,12 +129,22 @@ export const RemotionRoot: React.FC = () => {
 
 ### 1. アセットの準備
 
-#### キャラクター画像（3種類）
+#### キャラクター画像
+
+**瞬きのみの場合（2種類）:**
 ```
 public/characters/
-├── narrator-open.png      # 目を開いている（通常）
-├── narrator-half.png      # 目が半開き
-└── narrator-closed.png    # 目を閉じている
+├── narrator-eyes-open-mouth-closed.png   # 目を開いている・口を閉じている（通常）
+└── narrator-eyes-closed-mouth-closed.png # 目を閉じている・口を閉じている
+```
+
+**口パク機能を使う場合（4種類）:**
+```
+public/characters/
+├── narrator-eyes-open-mouth-closed.png   # 目を開いている・口を閉じている
+├── narrator-eyes-open-mouth-open.png     # 目を開いている・口を開いている
+├── narrator-eyes-closed-mouth-closed.png # 目を閉じている・口を閉じている
+└── narrator-eyes-closed-mouth-open.png   # 目を閉じている・口を開いている
 ```
 
 **推奨サイズ**: 幅800-1000px、高さ1200-1600px（縦長、透過PNG）
@@ -178,10 +190,16 @@ export const sampleConfig: VideoConfig = {
   characters: {
     narrator: {
       name: "ナレーター",
-      defaultImage: "/characters/narrator-open.png",
+      defaultImage: "/characters/narrator-eyes-open-mouth-closed.png",
       blinkImages: {
-        halfClosed: "/characters/narrator-half.png",
-        closed: "/characters/narrator-closed.png"
+        closed: "/characters/narrator-eyes-closed-mouth-closed.png"
+      },
+      // 口パク用の画像（オプション）
+      mouthImages: {
+        eyesOpenMouthOpen: "/characters/narrator-eyes-open-mouth-open.png",
+        eyesOpenMouthClosed: "/characters/narrator-eyes-open-mouth-closed.png",
+        eyesClosedMouthOpen: "/characters/narrator-eyes-closed-mouth-open.png",
+        eyesClosedMouthClosed: "/characters/narrator-eyes-closed-mouth-closed.png"
       }
     }
   },
@@ -223,7 +241,35 @@ export const sampleConfig: VideoConfig = {
 };
 ```
 
-### 3. キャラクターの配置調整
+### 3. 口パク機能（オプション）
+
+音声再生時にキャラクターが自動で口を動かします。
+
+#### 設定方法
+
+`mouthImages`に4枚の画像を設定：
+
+```typescript
+characters: {
+  narrator: {
+    name: "ナレーター",
+    defaultImage: "/characters/narrator-eyes-open-mouth-closed.png",
+    blinkImages: {
+      closed: "/characters/narrator-eyes-closed-mouth-closed.png"
+    },
+    mouthImages: {
+      eyesOpenMouthOpen: "/characters/narrator-eyes-open-mouth-open.png",
+      eyesOpenMouthClosed: "/characters/narrator-eyes-open-mouth-closed.png",
+      eyesClosedMouthOpen: "/characters/narrator-eyes-closed-mouth-open.png",
+      eyesClosedMouthClosed: "/characters/narrator-eyes-closed-mouth-closed.png"
+    }
+  }
+}
+```
+
+口パク機能を使わない場合は、`mouthImages`を省略してください。
+
+### 4. キャラクターの配置調整
 
 キャラクターの位置とサイズは`layout`で自由に調整できます。
 
@@ -231,10 +277,9 @@ export const sampleConfig: VideoConfig = {
 characters: {
   narrator: {
     name: "ナレーター",
-    defaultImage: "/characters/narrator-open.png",
+    defaultImage: "/characters/narrator-eyes-open-mouth-closed.png",
     blinkImages: {
-      halfClosed: "/characters/narrator-half.png",
-      closed: "/characters/narrator-closed.png"
+      closed: "/characters/narrator-eyes-closed-mouth-closed.png"
     },
     // 位置・サイズの調整
     layout: {
@@ -291,7 +336,7 @@ layout: {
 
 > **注意**: `layout`を省略すると、デフォルト設定が使用されます。
 
-### 4. スライドの種類
+### 5. スライドの種類
 
 #### テキストスライド
 ```typescript
@@ -323,7 +368,7 @@ slide: {
 }
 ```
 
-### 5. プレビュー
+### 6. プレビュー
 
 ```bash
 npm start
@@ -331,7 +376,7 @@ npm start
 
 ブラウザで `http://localhost:3000` を開きます。
 
-### 6. レンダリング
+### 7. レンダリング
 
 ```bash
 # デフォルト設定でレンダリング

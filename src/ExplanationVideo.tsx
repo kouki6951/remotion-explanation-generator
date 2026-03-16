@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, useCurrentFrame, staticFile, Audio, Sequence } from 'remotion';
 import { VideoConfig, Scene } from './config';
 import { useBlinkAnimation } from './useBlinkAnimation';
+import { useMouthAnimation } from './useMouthAnimation';
 import { PdfSlide } from './PdfSlide';
 
 interface ExplanationVideoProps {
@@ -211,19 +212,38 @@ const CharacterArea: React.FC<{ scene: Scene; config: VideoConfig }> = ({
   scene,
   config
 }) => {
+  const frame = useCurrentFrame();
   const character = config.characters[scene.character.id];
   const blinkState = useBlinkAnimation(config.fps);
 
-  // 瞬き状態に応じて画像を選択
-  let displayImagePath = character.defaultImage; // デフォルト: 目を開いている
+  // 現在のシーンで音声が再生されているかチェック
+  // Sequence内でレンダリングされているため、frameは0から始まる
+  const isAudioPlaying = Boolean(scene.audio?.voiceover);
+  const mouthState = useMouthAnimation(isAudioPlaying);
 
-  if (character.blinkImages) {
-    if (blinkState === 'halfClosed') {
-      displayImagePath = character.blinkImages.halfClosed;
-    } else if (blinkState === 'closed') {
+  // 瞬きと口パクを組み合わせて画像を選択
+  let displayImagePath = character.defaultImage; // デフォルト: 目を開いている・口を閉じている
+
+  // 口パク画像が設定されている場合
+  if (character.mouthImages) {
+    if (mouthState === 'open' && blinkState === 'open') {
+      // 目を開いて・口を開いている
+      displayImagePath = character.mouthImages.eyesOpenMouthOpen;
+    } else if (mouthState === 'open' && blinkState === 'closed') {
+      // 目を閉じて・口を開いている
+      displayImagePath = character.mouthImages.eyesClosedMouthOpen;
+    } else if (mouthState === 'closed' && blinkState === 'open') {
+      // 目を開いて・口を閉じている
+      displayImagePath = character.mouthImages.eyesOpenMouthClosed;
+    } else {
+      // 目を閉じて・口を閉じている
+      displayImagePath = character.mouthImages.eyesClosedMouthClosed;
+    }
+  } else {
+    // 口パク画像が設定されていない場合は瞬きのみ
+    if (character.blinkImages && blinkState === 'closed') {
       displayImagePath = character.blinkImages.closed;
     }
-    // blinkState === 'open' の場合はdefaultImageを使用
   }
 
   // レイアウト設定（デフォルト値）

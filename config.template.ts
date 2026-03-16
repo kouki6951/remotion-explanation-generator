@@ -35,13 +35,21 @@ export const videoConfig: VideoConfig = {
     narrator: {
       name: "ナレーター",
 
-      // 目を開いている状態の画像（通常時に表示）
-      defaultImage: "/characters/narrator-open.png",
+      // 目を開いている・口を閉じている状態の画像（通常時に表示）
+      defaultImage: "/characters/narrator-eyes-open-mouth-closed.png",
 
-      // 瞬き用の画像（オプション）
+      // 瞬き用の画像（口は閉じている状態）
       blinkImages: {
-        halfClosed: "/characters/narrator-half.png",
-        closed: "/characters/narrator-closed.png"
+        closed: "/characters/narrator-eyes-closed-mouth-closed.png"
+      },
+
+      // 口パク用の画像（オプション）
+      // 音声再生時に瞬きと口パクを組み合わせて使用（4パターン）
+      mouthImages: {
+        eyesOpenMouthOpen: "/characters/narrator-eyes-open-mouth-open.png",
+        eyesOpenMouthClosed: "/characters/narrator-eyes-open-mouth-closed.png",      // defaultImageと同じでOK
+        eyesClosedMouthOpen: "/characters/narrator-eyes-closed-mouth-open.png",
+        eyesClosedMouthClosed: "/characters/narrator-eyes-closed-mouth-closed.png"   // blinkImages.closedと同じでOK
       },
 
       // 表示位置・サイズの設定（オプション）

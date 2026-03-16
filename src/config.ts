@@ -79,12 +79,20 @@ export interface Scene {
 // ========================================
 export interface Character {
   name: string;
-  defaultImage: string; // デフォルト画像のパス（瞬き用の目を開いている画像）
+  defaultImage: string; // デフォルト画像のパス（目を開いている・口を閉じている状態）
 
-  // 瞬き用の画像
+  // 瞬き用の画像（口は閉じている状態）
   blinkImages?: {
-    halfClosed: string; // 目が半開き
-    closed: string;     // 目を閉じている
+    closed: string;     // 目を閉じている・口を閉じている
+  };
+
+  // 口パク用の画像（音声再生時に使用）
+  // 瞬きと口パクを組み合わせた4パターンの画像
+  mouthImages?: {
+    eyesOpenMouthOpen: string;       // 目を開いている・口を開いている
+    eyesOpenMouthClosed: string;     // 目を開いている・口を閉じている（defaultImageと同じでOK）
+    eyesClosedMouthOpen: string;     // 目を閉じている・口を開いている
+    eyesClosedMouthClosed: string;   // 目を閉じている・口を閉じている（blinkImages.closedと同じでOK）
   };
 
   // 表示位置・サイズの設定
@@ -139,17 +147,23 @@ export const sampleConfig: VideoConfig = {
   characters: {
     narrator: {
       name: "ナレーター",
-      defaultImage: "/characters/narrator-eyes-open.png",
+      defaultImage: "/characters/narrator-eyes-open-mouth-closed.png",
       blinkImages: {
-        halfClosed: "/characters/narrator-eyes-half.png",
-        closed: "/characters/narrator-yes-closed.png"
+        closed: "/characters/narrator-eyes-closed-mouth-close.png"  // ファイル名のtypo: close
+      },
+      // 口パク用の画像（4パターン）
+      mouthImages: {
+        eyesOpenMouthOpen: "/characters/narrator-eyes-open-mouth-open.png",
+        eyesOpenMouthClosed: "/characters/narrator-eyes-open-mouth-closed.png",
+        eyesClosedMouthOpen: "/characters/narrator-eyes-closed-mouth-open.png",
+        eyesClosedMouthClosed: "/characters/narrator-eyes-closed-mouth-closed.png"  // ファイル名のtypo: close
       },
       // 表示位置とサイズのカスタマイズ
       layout: {
         width: '45%',         // 画面幅の45%
-        height: '150%',        // 画面高さの95%
-        bottom: '-800px',          // 画面下端に配置
-        right: '-160px'        // 右端から-50px（少しはみ出す）
+        height: '150%',       // 画面高さの150%
+        bottom: '-800px',     // 画面下端に配置
+        right: '-160px'       // 右端から-160px
       }
     }
   },
