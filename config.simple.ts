@@ -16,10 +16,16 @@ export const simpleConfig: VideoConfig = {
   characters: {
     narrator: {
       name: "ナレーター",
-      defaultImage: "/characters/narrator-open.png",
+      defaultImage: "/characters/narrator-eyes-open-mouth-closed.png",
       blinkImages: {
-        halfClosed: "/characters/narrator-half.png",
-        closed: "/characters/narrator-closed.png"
+        closed: "/characters/narrator-eyes-closed-mouth-closed.png"
+      },
+      // 口パク用の画像（オプション）
+      mouthImages: {
+        eyesOpenMouthOpen: "/characters/narrator-eyes-open-mouth-open.png",
+        eyesOpenMouthClosed: "/characters/narrator-eyes-open-mouth-closed.png",
+        eyesClosedMouthOpen: "/characters/narrator-eyes-closed-mouth-open.png",
+        eyesClosedMouthClosed: "/characters/narrator-eyes-closed-mouth-closed.png"
       },
       // 位置・サイズ調整（オプション）
       layout: {
