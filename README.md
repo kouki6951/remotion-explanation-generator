@@ -5,10 +5,16 @@ Remotionを使用した自動動画作成システムです。台本やキャラ
 ## 特徴
 
 - **3分割レイアウト**: スライド、字幕、キャラクター立ち絵
-- **自動瞬きアニメーション**: キャラクターがリアルに瞬きします
-- **口パクアニメーション**: 音声再生時にキャラクターが口を動かします
+- **自動瞬きアニメーション**: キャラクターがリアルに瞬きします（FPSに応じて自動調整）
+- **口パクアニメーション**: 音声再生時にキャラクターが口を動かします（実際の音声再生タイミングと自動同期、FPS対応）
+- **音声の長さ自動判定**: 音声ファイルから長さを自動取得、手動設定不要
+- **総フレーム数の自動計算**: 全シーンの合計から動画全体の長さを自動計算
+- **シーン切り替えアニメーション**: 1秒のフェードイン＋スライドイン効果
+- **BGMフェードアウト**: 動画終了時の最後2秒間で自動フェードアウト
 - **音声対応**: BGMとシーン毎のナレーション設定
-- **PDF表示**: PDFをスライドとして表示可能
+- **多彩なスライド形式**: テキスト、画像、PDF、動画に対応
+- **動画スライド**: スライド内で動画を表示可能（自動ループ再生）
+- **テキスト改行対応**: `\n`で改行可能
 - **柔軟なカスタマイズ**: 背景、色、フォントなど自由に設定
 
 ## 画面構成
@@ -173,7 +179,7 @@ public/audio/
 export const sampleConfig: VideoConfig = {
   title: "解説動画タイトル",
   fps: 30,
-  durationInFrames: 600, // 20秒
+  // durationInFrames: 600, // 省略すると全シーンの合計から自動計算
   width: 1920,
   height: 1080,
 
@@ -208,22 +214,17 @@ export const sampleConfig: VideoConfig = {
   scenes: [
     {
       id: "scene1",
-      startFrame: 0,
-      durationInFrames: 150,  // 5秒
+      startFrame: 0,  // 最初のシーンのみ指定（以降は自動計算）
+      // durationInFrames: 150,  // 省略すると音声の長さから自動計算
 
       // スライド
       slide: {
         type: 'text',
         title: 'イントロ',
         content: 'Remotionとは？',
+        fontSize: 80,          // フォントサイズ指定（オプション）
         backgroundColor: '#1a1a2e',
         textColor: '#ffffff'
-      },
-
-      // 字幕
-      subtitle: {
-        text: 'Remotionはコードで動画を作成できるフレームワークです',
-        fontSize: 24
       },
 
       // キャラクター
@@ -231,11 +232,21 @@ export const sampleConfig: VideoConfig = {
         id: 'narrator'
       },
 
-      // 音声
-      audio: {
-        voiceover: "/audio/scene1.mp3",
-        volume: 1.0
-      }
+      // セグメント（字幕と音声のペア、複数設定可能で順次再生）
+      segments: [
+        {
+          subtitle: {
+            text: 'Remotionはコードで動画を作成できるフレームワークです',
+            fontSize: 24
+          },
+          audio: {
+            voiceover: "/audio/scene1.mp3"
+            // durationInFrames: 150,  // 省略すると音声ファイルから自動取得
+            // delayFrames: 0,         // 開始遅延（オプション、デフォルト: 0）
+            // volume: 1.0             // 音量（オプション、デフォルト: 1.0）
+          }
+        }
+      ]
     }
   ]
 };
@@ -336,14 +347,103 @@ layout: {
 
 > **注意**: `layout`を省略すると、デフォルト設定が使用されます。
 
-### 5. スライドの種類
+### 5. セグメント設定（字幕と音声）
+
+各シーンには複数のセグメント（字幕と音声のペア）を設定できます。セグメントは配列の順番通りに順次再生されます。
+
+**重要**: `durationInFrames`は省略すると音声ファイルから自動取得されます。
+
+#### 単一のセグメント
+
+```typescript
+segments: [
+  {
+    subtitle: {
+      text: 'Remotionはコードで動画を作成できるフレームワークです',
+      fontSize: 24  // オプション
+    },
+    audio: {
+      voiceover: "/audio/scene1.mp3"
+      // durationInFrames: 150,  // 省略すると音声ファイルから自動取得
+      // delayFrames: 0,         // 開始遅延（オプション、デフォルト: 0）
+      // volume: 1.0             // 音量（オプション、デフォルト: 1.0）
+    }
+  }
+]
+```
+
+#### 複数のセグメント（順次再生）
+
+複数のセグメントを設定すると、字幕と音声が自動的に切り替わります。
+
+```typescript
+segments: [
+  {
+    subtitle: {
+      text: 'まずは基本的な機能を紹介します'
+    },
+    audio: {
+      voiceover: "/audio/intro.mp3"
+    }
+  },
+  {
+    subtitle: {
+      text: '次に応用的な使い方を見ていきましょう'
+    },
+    audio: {
+      voiceover: "/audio/explanation.mp3",
+      delayFrames: 15  // 前の音声終了後0.5秒待ってから再生
+    }
+  },
+  {
+    subtitle: {
+      text: '最後にまとめです'
+    },
+    audio: {
+      voiceover: "/audio/conclusion.mp3",
+      volume: 0.8  // 音量を80%に
+    }
+  }
+]
+```
+
+#### 字幕のみ・音声のみのセグメント
+
+字幕と音声は個別に省略できます。
+
+```typescript
+segments: [
+  {
+    // 字幕のみ（音声なし）
+    subtitle: {
+      text: '無音で字幕だけ表示'
+    }
+  },
+  {
+    // 音声のみ（字幕なし）
+    audio: {
+      voiceover: "/audio/bgm-only.mp3",
+      durationInFrames: 60
+    }
+  }
+]
+```
+
+**注意:**
+- `durationInFrames`は省略すると音声ファイルから自動取得されます（推奨）
+- `delayFrames`を設定すると、前のセグメント終了後に指定したフレーム数だけ待ってから再生されます
+- 口パク機能は、実際の音声が再生されている間だけ自動的に動作します
+- セグメントを省略すると、そのシーンでは字幕が表示されません
+
+### 6. スライドの種類
 
 #### テキストスライド
 ```typescript
 slide: {
   type: 'text',
   title: '副題',
-  content: 'メインテキスト',
+  content: 'メインテキスト\n複数行も可能',  // \nで改行
+  fontSize: 80,              // フォントサイズ（オプション、デフォルト: 80）
   backgroundColor: '#1a1a2e',
   textColor: '#ffffff'
 }
@@ -368,7 +468,21 @@ slide: {
 }
 ```
 
-### 6. プレビュー
+#### 動画スライド
+```typescript
+slide: {
+  type: 'video',
+  title: 'デモ動画',
+  videoPath: '/videos/demo.mp4'  // 動画ファイルのパス（MP4推奨）
+}
+```
+
+**注意:**
+- 動画はシーン内で自動的にループ再生されます
+- 動画の音声はミュートされ、ナレーション音声のみが再生されます
+- 推奨形式: MP4 (H.264コーデック)
+
+### 7. プレビュー
 
 ```bash
 npm start
@@ -376,7 +490,7 @@ npm start
 
 ブラウザで `http://localhost:3000` を開きます。
 
-### 7. レンダリング
+### 8. レンダリング
 
 ```bash
 # デフォルト設定でレンダリング
@@ -386,7 +500,58 @@ npm run build
 npx remotion render src/index.ts ExplanationVideo out/video.mp4
 ```
 
-## フレーム計算
+## 自動計算機能
+
+### シーンの長さと開始位置
+
+**動画全体の長さ**:
+
+- `durationInFrames`を省略すると、全シーンの合計から自動計算されます
+
+```typescript
+export const config: VideoConfig = {
+  title: "動画タイトル",
+  fps: 30,
+  // durationInFrames: 省略（全シーンの合計から自動計算）
+  // ...
+};
+```
+
+**シーンの`durationInFrames`と`startFrame`は自動計算されます:**
+
+- **最初のシーン**: `startFrame: 0`を指定
+- **2番目以降のシーン**: `startFrame`と`durationInFrames`を省略すると自動計算
+- **シーンの長さ**: セグメント内の音声の合計から自動計算
+
+```typescript
+scenes: [
+  {
+    id: "scene1",
+    startFrame: 0,  // 最初のみ指定
+    // durationInFrames: 省略（音声から自動計算）
+    segments: [ /* ... */ ]
+  },
+  {
+    id: "scene2",
+    // startFrame: 省略（前のシーンの終了位置から自動計算）
+    // durationInFrames: 省略（音声から自動計算）
+    segments: [ /* ... */ ]
+  }
+]
+```
+
+**音声の長さ**:
+
+- 音声の`durationInFrames`は自動取得されます
+
+```typescript
+audio: {
+  voiceover: "/audio/narration.mp3"
+  // durationInFrames: 省略（音声ファイルから自動取得）
+}
+```
+
+## フレーム計算（手動設定する場合）
 
 - **FPS**: 30の場合、1秒 = 30フレーム
 - **5秒のシーン**: `durationInFrames: 150`
@@ -394,6 +559,23 @@ npx remotion render src/index.ts ExplanationVideo out/video.mp4
   - シーン1: `startFrame: 0`
   - シーン2: `startFrame: 150` (5秒後)
   - シーン3: `startFrame: 300` (10秒後)
+
+## 推奨ファイルサイズ・形式
+
+### 背景画像
+- **サイズ**: 1920 × 1080px（動画の解像度と同じ）
+- **形式**: PNG または JPG
+- **アスペクト比**: 16:9
+
+### キャラクター画像
+- **幅**: 800-1000px
+- **高さ**: 1200-1600px
+- **形式**: PNG（透過推奨）
+
+### 音声
+- **形式**: MP3, WAV
+- **ビットレート**: 128kbps以上
+- **長さ**: 自動取得されるため任意
 
 ## トラブルシューティング
 
@@ -403,9 +585,13 @@ npx remotion render src/index.ts ExplanationVideo out/video.mp4
 - ブラウザのコンソールでエラーを確認
 
 ### 音声が再生されない
-- **MP3形式のみ対応**
+- **MP3, WAV形式に対応**
 - ファイルパスが正しいか確認
 - 音量設定（0.0-1.0）を確認
+
+### 口パクが動作しない
+- `mouthImages`が正しく設定されているか確認
+- 音声ファイルが正しく再生されているか確認
 
 ### PDFが表示されない
 - ライブラリが正しくインストールされているか確認

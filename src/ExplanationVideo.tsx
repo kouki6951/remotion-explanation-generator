@@ -1,9 +1,14 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, staticFile, Audio, Sequence } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, staticFile, Audio, OffthreadVideo, useVideoConfig } from 'remotion';
 import { VideoConfig, Scene } from './config';
 import { useBlinkAnimation } from './useBlinkAnimation';
 import { useMouthAnimation } from './useMouthAnimation';
 import { PdfSlide } from './PdfSlide';
+import { AudioSegment } from './AudioSegment';
+import { useSceneAudioInfo } from './useSceneAudioInfo';
+import { useAllAudioDurations } from './useAllAudioDurations';
+import { calculateSceneDuration } from './calculateSceneDuration';
+import { normalizeScenes } from './normalizeScenes';
 
 interface ExplanationVideoProps {
   config: VideoConfig;
@@ -11,13 +16,32 @@ interface ExplanationVideoProps {
 
 export const ExplanationVideo: React.FC<ExplanationVideoProps> = ({ config }) => {
   const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+
+  // すべての音声ファイルの長さを一度に取得
+  const audioDurations = useAllAudioDurations(config);
+
+  // シーンを正規化（startFrameとdurationInFramesを自動計算）
+  const normalizedScenes = React.useMemo(
+    () => normalizeScenes(config.scenes, audioDurations),
+    [config.scenes, audioDurations]
+  );
 
   // 現在のフレームに対応するシーンを取得
-  const currentScene = config.scenes.find(
-    (scene) =>
-      frame >= scene.startFrame &&
-      frame < scene.startFrame + scene.durationInFrames
+  const currentScene = normalizedScenes.find(
+    (scene) => frame >= scene.startFrame && frame < scene.startFrame + scene.durationInFrames
   );
+
+  // BGMのフェードアウト計算（最後の2秒間）
+  const fadeOutDuration = 60; // 2秒 = 60フレーム
+  const fadeOutStartFrame = durationInFrames - fadeOutDuration;
+  const bgmVolume = React.useMemo(() => {
+    if (frame < fadeOutStartFrame) {
+      return config.backgroundMusic?.volume ?? 0.5;
+    }
+    const fadeProgress = (durationInFrames - frame) / fadeOutDuration;
+    return (config.backgroundMusic?.volume ?? 0.5) * fadeProgress;
+  }, [frame, fadeOutStartFrame, durationInFrames, config.backgroundMusic?.volume]);
 
   if (!currentScene) {
     return <AbsoluteFill style={{ backgroundColor: '#000' }} />;
@@ -29,26 +53,45 @@ export const ExplanationVideo: React.FC<ExplanationVideoProps> = ({ config }) =>
       {config.backgroundMusic && (
         <Audio
           src={staticFile(config.backgroundMusic.path)}
-          volume={config.backgroundMusic.volume ?? 0.5}
+          volume={bgmVolume}
           loop
         />
       )}
 
-      {/* シーン毎の音声 */}
-      {config.scenes.map((scene) => (
-        scene.audio?.voiceover && (
-          <Sequence
-            key={`audio-${scene.id}`}
-            from={scene.startFrame}
-            durationInFrames={scene.durationInFrames}
-          >
-            <Audio
-              src={staticFile(scene.audio.voiceover)}
-              volume={scene.audio.volume ?? 1.0}
+      {/* シーン毎の音声（セグメント対応、順次再生） */}
+      {normalizedScenes.map((scene) => {
+        if (!scene.segments || scene.segments.length === 0) return null;
+
+        // シーン内の音声情報を取得
+        const sceneAudioInfo = useSceneAudioInfo(scene, audioDurations);
+
+        // 各セグメントの音声を順次再生
+        let audioInfoIndex = 0;
+
+        return scene.segments.map((segment, index) => {
+          if (!segment.audio) return null;
+
+          const info = sceneAudioInfo[audioInfoIndex];
+          audioInfoIndex++;
+
+          if (!info) return null; // 音声情報がまだ読み込まれていない
+
+          const audioStartFrame = scene.startFrame + info.startFrame;
+
+          return (
+            <AudioSegment
+              key={`audio-${scene.id}-${index}`}
+              voiceover={segment.audio.voiceover}
+              startFrame={audioStartFrame}
+              durationInFrames={info.duration}
+              volume={segment.audio.volume}
+              fps={config.fps}
+              sceneId={scene.id}
+              segmentIndex={index}
             />
-          </Sequence>
-        )
-      ))}
+          );
+        });
+      })}
 
       {/* 背景画像 */}
       {config.backgroundImage && (
@@ -72,13 +115,13 @@ export const ExplanationVideo: React.FC<ExplanationVideoProps> = ({ config }) =>
           <SlideArea scene={currentScene} />
 
           {/* 字幕エリア（スライドの下） */}
-          <SubtitleArea scene={currentScene} />
+          <SubtitleArea scene={currentScene} config={config} audioDurations={audioDurations} />
         </div>
       </AbsoluteFill>
 
       {/* キャラクターエリア（最前面） */}
       <AbsoluteFill>
-        <CharacterArea scene={currentScene} config={config} />
+        <CharacterArea scene={currentScene} config={config} audioDurations={audioDurations} />
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -86,7 +129,23 @@ export const ExplanationVideo: React.FC<ExplanationVideoProps> = ({ config }) =>
 
 // スライドエリアコンポーネント
 const SlideArea: React.FC<{ scene: Scene }> = ({ scene }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { slide } = scene;
+
+  // シーン内での相対フレーム位置
+  const relativeFrame = frame - (scene.startFrame ?? 0);
+
+  // アニメーション設定（最初の30フレーム = 1秒）
+  const animationDuration = 30;
+  const progress = Math.min(relativeFrame / animationDuration, 1);
+
+  // イージング関数（easeOutCubic）
+  const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+  // アニメーションスタイル
+  const opacity = easeProgress;
+  const translateX = (1 - easeProgress) * -50; // 左から50pxスライドイン
 
   return (
     <div
@@ -99,7 +158,9 @@ const SlideArea: React.FC<{ scene: Scene }> = ({ scene }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '40px'
+        padding: '40px',
+        opacity: opacity,
+        transform: `translateX(${translateX}px)`
       }}
     >
       {/* スライド背景画像またはカラー */}
@@ -174,12 +235,13 @@ const SlideArea: React.FC<{ scene: Scene }> = ({ scene }) => {
           <h1
             style={{
               color: slide.textColor || '#ffffff',
-              fontSize: '80px',
+              fontSize: slide.fontSize ? `${slide.fontSize}px` : '80px',
               fontWeight: 'bold',
               textAlign: 'center',
               margin: 0,
               fontFamily: 'Arial, sans-serif',
-              textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+              textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+              whiteSpace: 'pre-line'
             }}
           >
             {slide.content}
@@ -202,24 +264,98 @@ const SlideArea: React.FC<{ scene: Scene }> = ({ scene }) => {
             pageNumber={slide.pdfPage || 1}
           />
         )}
+        {slide.type === 'video' && slide.videoPath && relativeFrame >= 0 && (
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden'
+          }}>
+            <video
+              src={staticFile(slide.videoPath)}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain'
+              }}
+              muted
+              playsInline
+              ref={(video) => {
+                if (video) {
+                  // 再生速度を固定
+                  video.playbackRate = 1.0;
+
+                  const targetTime = relativeFrame / fps;
+                  // 動画の長さを取得してループ処理
+                  const duration = video.duration;
+                  if (duration && !isNaN(duration)) {
+                    const loopedTime = targetTime % duration;
+                    if (Math.abs(video.currentTime - loopedTime) > 0.1) {
+                      video.currentTime = loopedTime;
+                    }
+                  } else if (Math.abs(video.currentTime - targetTime) > 0.1) {
+                    video.currentTime = targetTime;
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 // キャラクターエリアコンポーネント
-const CharacterArea: React.FC<{ scene: Scene; config: VideoConfig }> = ({
+const CharacterArea: React.FC<{
+  scene: Scene;
+  config: VideoConfig;
+  audioDurations: Map<string, number>;
+}> = ({
   scene,
-  config
+  config,
+  audioDurations
 }) => {
   const frame = useCurrentFrame();
   const character = config.characters[scene.character.id];
   const blinkState = useBlinkAnimation(config.fps);
 
-  // 現在のシーンで音声が再生されているかチェック
-  // Sequence内でレンダリングされているため、frameは0から始まる
-  const isAudioPlaying = Boolean(scene.audio?.voiceover);
-  const mouthState = useMouthAnimation(isAudioPlaying);
+  // シーン内の各セグメントの実際の音声情報を取得
+  const audioInfo = useSceneAudioInfo(scene, audioDurations);
+
+  // 現在のシーンで音声が再生されているかチェック（実際の音声ファイルの長さに基づく）
+  const isAudioPlaying = React.useMemo(() => {
+    // シーン内の相対フレーム位置を計算
+    const relativeFrame = frame - scene.startFrame;
+
+    // シーンの範囲外は常にfalse（動的に長さを計算）
+    const sceneDuration = calculateSceneDuration(scene, audioDurations);
+    if (relativeFrame < 0 || relativeFrame >= sceneDuration) {
+      return false;
+    }
+
+    // 各セグメントの音声再生範囲をチェック
+    for (const info of audioInfo) {
+      if (relativeFrame >= info.startFrame && relativeFrame < info.endFrame) {
+        // デバッグ出力
+        if (scene.id === 'scene1' && relativeFrame % 30 === 0) {
+          console.log(`[Scene1 Debug] Frame: ${frame}, RelativeFrame: ${relativeFrame}, AudioStart: ${info.startFrame}, AudioEnd: ${info.endFrame}, Duration: ${info.duration}, IsPlaying: true`);
+        }
+        return true;
+      }
+    }
+
+    // デバッグ出力
+    if (scene.id === 'scene1' && relativeFrame % 30 === 0) {
+      console.log(`[Scene1 Debug] Frame: ${frame}, RelativeFrame: ${relativeFrame}, AudioInfo: ${JSON.stringify(audioInfo)}, IsPlaying: false`);
+    }
+
+    return false;
+  }, [frame, scene, audioInfo]);
+
+  const mouthState = useMouthAnimation(isAudioPlaying, config.fps);
 
   // 瞬きと口パクを組み合わせて画像を選択
   let displayImagePath = character.defaultImage; // デフォルト: 目を開いている・口を閉じている
@@ -314,8 +450,50 @@ const CharacterArea: React.FC<{ scene: Scene; config: VideoConfig }> = ({
 };
 
 // 字幕エリアコンポーネント
-const SubtitleArea: React.FC<{ scene: Scene }> = ({ scene }) => {
-  const { subtitle } = scene;
+const SubtitleArea: React.FC<{
+  scene: Scene;
+  config: VideoConfig;
+  audioDurations: Map<string, number>;
+}> = ({ scene, config, audioDurations }) => {
+  const frame = useCurrentFrame();
+
+  // セグメントがない場合は何も表示しない
+  if (!scene.segments || scene.segments.length === 0) {
+    return null;
+  }
+
+  // シーン内の各セグメントの実際の音声情報を取得
+  const audioInfo = useSceneAudioInfo(scene, audioDurations);
+
+  // 現在のフレームに対応するセグメントを取得
+  const relativeFrame = frame - scene.startFrame;
+  let currentSegment = null;
+
+  // 実際の音声再生タイミングに基づいて字幕を表示
+  for (let i = 0; i < audioInfo.length; i++) {
+    const info = audioInfo[i];
+    if (relativeFrame >= info.startFrame && relativeFrame < info.endFrame) {
+      // この音声に対応するセグメントを取得
+      let segmentIndex = 0;
+      for (const segment of scene.segments) {
+        if (segment.audio) {
+          if (segmentIndex === i) {
+            currentSegment = segment;
+            break;
+          }
+          segmentIndex++;
+        }
+      }
+      break;
+    }
+  }
+
+  // 表示する字幕がない場合
+  if (!currentSegment || !currentSegment.subtitle) {
+    return null;
+  }
+
+  const subtitle = currentSegment.subtitle;
 
   return (
     <div
