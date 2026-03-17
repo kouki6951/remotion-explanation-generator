@@ -8,7 +8,7 @@ export const simpleConfig: VideoConfig = {
   // 基本設定
   title: "シンプル動画",
   fps: 30,
-  durationInFrames: 300,  // 10秒
+  // durationInFrames: 300,  // 省略すると全シーンの合計から自動計算
   width: 1920,
   height: 1080,
 
@@ -41,8 +41,7 @@ export const simpleConfig: VideoConfig = {
   scenes: [
     {
       id: "scene1",
-      startFrame: 0,
-      durationInFrames: 150,  // 5秒
+      startFrame: 0,  // 最初のシーンのみ指定
 
       slide: {
         type: 'text',
@@ -51,19 +50,24 @@ export const simpleConfig: VideoConfig = {
         textColor: '#ffffff'
       },
 
-      subtitle: {
-        text: 'シーン1の説明文'
-      },
-
       character: {
         id: 'narrator'
-      }
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: 'シーン1の説明文'
+          },
+          audio: {
+            voiceover: "/audio/scene1.mp3"
+          }
+        }
+      ]
     },
 
     {
       id: "scene2",
-      startFrame: 150,
-      durationInFrames: 150,  // 5秒
 
       slide: {
         type: 'text',
@@ -72,13 +76,20 @@ export const simpleConfig: VideoConfig = {
         textColor: '#ffffff'
       },
 
-      subtitle: {
-        text: 'シーン2の説明文'
-      },
-
       character: {
         id: 'narrator'
-      }
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: 'シーン2の説明文'
+          },
+          audio: {
+            voiceover: "/audio/scene2.mp3"
+          }
+        }
+      ]
     }
   ]
 };

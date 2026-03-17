@@ -12,7 +12,7 @@ export interface VideoConfig {
   // 動画の基本設定
   title: string;
   fps: number;
-  durationInFrames: number;
+  durationInFrames?: number; // 省略時は全シーンの合計から自動計算
   width: number;
   height: number;
 
@@ -39,27 +39,22 @@ export interface VideoConfig {
 // ========================================
 export interface Scene {
   id: string;
-  startFrame: number;
-  durationInFrames: number;
+  startFrame?: number; // 省略時は前のシーンの終了位置から自動計算
+  durationInFrames?: number; // 省略時はセグメント内の音声の合計から自動計算
 
   // スライド部分
   slide: {
-    type: 'text' | 'image' | 'pdf';
+    type: 'text' | 'image' | 'pdf' | 'video';
     title?: string; // 副題（スライド左上に表示）
     content?: string;
+    fontSize?: number; // テキストのフォントサイズ（type: 'text'の場合）
     imagePath?: string;
     pdfPath?: string; // PDFファイルのパス
     pdfPage?: number; // 表示するPDFのページ番号（1から開始）
+    videoPath?: string; // 動画ファイルのパス（type: 'video'の場合）
     backgroundColor?: string;
     textColor?: string;
     backgroundImage?: string; // スライド専用の背景画像
-  };
-
-  // 字幕部分
-  subtitle: {
-    text: string;
-    color?: string;
-    fontSize?: number;
   };
 
   // キャラクター部分
@@ -67,11 +62,20 @@ export interface Scene {
     id: string; // charactersオブジェクトのキーを参照
   };
 
-  // 音声設定
-  audio?: {
-    voiceover?: string; // ナレーション音声ファイルのパス
-    volume?: number;    // 音量 (0.0 - 1.0)
-  };
+  // セグメント（字幕と音声のペア、複数設定可能で順次再生）
+  segments?: {
+    subtitle?: {
+      text: string;
+      color?: string;
+      fontSize?: number;
+    };
+    audio?: {
+      voiceover: string;        // ナレーション音声ファイルのパス
+      durationInFrames?: number; // この音声の長さ（フレーム数、省略時は自動計算）
+      delayFrames?: number;     // 開始遅延（フレーム数、デフォルト: 0）
+      volume?: number;          // 音量 (0.0 - 1.0)
+    };
+  }[];
 }
 
 // ========================================
@@ -109,22 +113,25 @@ export interface Character {
  * ========================================
  * サンプル動画設定
  * ========================================
- * Remotionの機能を紹介するデモ動画の設定例
+ * remotion-explanation-generatorの解説動画
  *
  * 動画の構成:
- * - シーン1 (0-4.3秒): Remotionの紹介（テキストスライド）
- * - シーン2 (4.3-8.6秒): React活用の説明（テキストスライド）
- * - シーン3 (8.6-13秒): PDF表示のデモ（PDFスライド）
+ * - シーン1 : タイトル
+ * - シーン2 : このツールの概要
+ * - シーン3 (10-15秒: 3つの特徴
+ * - シーン4 : 設定ファイルの説明
+ * - シーン5 : 使い方の流れ
+ * - シーン6 : まとめ
  *
- * 総尺: 約13秒
+ * 総尺: 約30秒
  */
 export const sampleConfig: VideoConfig = {
   // ----------------------------------------
   // 基本設定
   // ----------------------------------------
-  title: "Remotion解説動画サンプル",
+  title: "remotion-explanation-generator解説",
   fps: 30,                      // 30フレーム/秒
-  durationInFrames: 390,        // 総フレーム数（390 = 13秒）
+  // durationInFramesは省略すると全シーンの合計から自動計算されます
   width: 1920,                  // フルHD
   height: 1080,
 
@@ -138,7 +145,7 @@ export const sampleConfig: VideoConfig = {
   // ----------------------------------------
   backgroundMusic: {
     path: "/audio/bgm.mp3",
-    volume: 0.3                 // 30%の音量
+    volume: 0.1                 // 30%の音量
   },
 
   // ----------------------------------------
@@ -173,103 +180,350 @@ export const sampleConfig: VideoConfig = {
   // ----------------------------------------
   scenes: [
     // ========================================
-    // シーン1: Remotionの紹介
+    // シーン1: タイトル
     // ========================================
     {
       id: "scene1",
-      startFrame: 0,              // 0秒から開始
-      durationInFrames: 130,      // 約4.3秒間
+      startFrame: 0,
+      // durationInFramesは省略すると音声の長さから自動計算されます
 
-      // スライド: テキスト表示
       slide: {
         type: 'text',
-        title: 'イントロ',        // 左上の副題
-        content: 'Remotionとは？', // メインテキスト
-        backgroundColor: '#1a1a2e',
-        textColor: '#ffffff'
-      },
-
-      // 字幕
-      subtitle: {
-        text: 'Remotionはコードで動画を作成できるフレームワークです',
-        color: '#ffffff',
-        fontSize: 32
-      },
-
-      // キャラクター
-      character: {
-        id: 'narrator'
-      },
-
-      // 音声
-      audio: {
-        voiceover: "/audio/scene1.wav",
-        volume: 1.0
-      }
-    },
-    // ========================================
-    // シーン2: React活用の説明
-    // ========================================
-    {
-      id: "scene2",
-      startFrame: 130,            // 4.3秒から開始
-      durationInFrames: 130,      // 約4.3秒間
-
-      // スライド: テキスト表示
-      slide: {
-        type: 'text',
-        title: '機能紹介',
-        content: 'Reactを使って動画を作成',
+        content: 'remotion-explanation-generator',
+        fontSize: 70,
         backgroundColor: '#16213e',
         textColor: '#ffffff'
       },
 
-      // 字幕
-      subtitle: {
-        text: 'Reactコンポーネントを使って柔軟に動画を構築できます',
-        color: '#ffffff',
-        fontSize: 32
-      },
-
-      // キャラクター
       character: {
         id: 'narrator'
       },
 
-      // 音声
-      audio: {
-        voiceover: "/audio/scene2.wav",
-        volume: 1.0
-      }
+      segments: [
+        {
+          subtitle: {
+            text: 'このプログラムについて説明します。',
+            fontSize: 28
+          },
+          audio: {
+            voiceover: "/audio/scene1.wav",
+            // durationInFramesは省略すると自動計算されます
+            volume: 1.0
+          }
+        }
+      ]
     },
+
     // ========================================
-    // シーン3: PDF表示のデモ
+    // シーン2: このツールの概要
+    // ========================================
+    {
+      id: "scene2",
+      // startFrameとdurationInFramesは自動計算されます
+
+      slide: {
+        type: 'text',
+        title: '概要',
+        content: 'Remotionベースの\n解説動画作成システム',
+        fontSize: 60,
+        backgroundColor: '#16213e',
+        textColor: '#ffffff'
+      },
+
+      character: {
+        id: 'narrator'
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: 'このプログラムは、Remotionベースの解説動画作成システムです。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene2_1.wav",
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: 'TypeScript設定ファイルで台本を記述すると、自動で動画が生成されます',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene2_2.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        }
+      ]
+    },
+
+    // ========================================
+    // シーン3: 3つの特徴の提示
     // ========================================
     {
       id: "scene3",
-      startFrame: 260,            // 8.6秒から開始
-      durationInFrames: 130,      // 約4.3秒間
 
-      // スライド: PDF表示
       slide: {
-        type: 'pdf',
-        pdfPath: "/pdfs/presentation.pdf",
-        pdfPage: 1                // 1ページ目を表示
+        type: 'text',
+        title: '3つの特徴',
+        content: '① 3分割レイアウト\n\n② 自動アニメーション\n\n③ 音声の自動同期',
+        fontSize: 50,
+        backgroundColor: '#16213e',
+        textColor: '#ffffff'
       },
 
-      // 字幕
-      subtitle: {
-        text: 'このようにPDFを表示できます',
-        color: '#ffffff',
-        fontSize: 32
-      },
-
-      // キャラクター
       character: {
         id: 'narrator'
-      }
-      // 音声: このシーンは音声なし
-    }
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: 'このシステムには、3つの大きな特徴があります。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene3.wav",
+            volume: 1.0
+          }
+        }
+      ]
+    },
+
+    // ========================================
+    // シーン4: 特徴1 - 3分割レイアウト
+    // ========================================
+    {
+      id: "scene4",
+
+      slide: {
+        type: 'text',
+        title: '特徴①',
+        content: '3分割レイアウト\n\nスライド・字幕・キャラクター',
+        fontSize: 55,
+        backgroundColor: '#16213e',
+        textColor: '#ffffff'
+      },
+
+      character: {
+        id: 'narrator'
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: '1つ目の特徴は、スライド、字幕、キャラクターの3画面構成です。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene4_1.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        },
+      ]
+    },
+    // ========================================
+    // シーン5: 特徴1 - 3分割レイアウト2
+    // ========================================
+    {
+      id: "scene5",
+
+      slide: {
+        type: 'image',
+        title: '特徴①',
+        imagePath: '/images/scene3_2.png',
+      },
+    
+      character: {
+        id: 'narrator'
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: '左側にスライド、下部に字幕、右側にキャラクターを配置しています。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene4_2.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: '見やすいレイアウトで、解説動画に最適な構成となっています。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene4_3.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        }
+      ]
+    },
+
+    // ========================================
+    // シーン6: 特徴2 - 自動アニメーション1
+    // ========================================
+    {
+      id: "scene6",
+
+      slide: {
+        type: 'text',
+        title: '特徴②',
+        content: '自動アニメーション\n\n瞬き・口パク',
+        fontSize: 55,
+        backgroundColor: '#1a1a2e',
+        textColor: '#ffffff'
+      },
+
+      character: {
+        id: 'narrator'
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: '2つ目の特徴は、キャラクターの瞬きと口パクが自動でアニメーションすることです。',
+            fontSize: 25
+          },
+          audio: {
+            voiceover: "/audio/scene6.wav",
+            volume: 1.0
+          }
+        },
+      ]
+    },
+    // ========================================
+    // シーン7: 特徴2 - 自動アニメーション2
+    // ========================================
+    {
+      id: "scene7",
+      slide: {
+        type: 'video',
+        title: '特徴②',
+        videoPath: '/videos/scene7.mp4',
+      },
+      character: {
+        id: 'narrator'
+      },
+      segments: [
+        {
+          subtitle: {
+            text: '瞬きは自然なタイミングで自動的に行われます。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene7_1.wav",
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: '口パクは、音声が再生されている間だけ、リアルタイムで動きます。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene7_2.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: '音声の再生タイミングと完全に同期するので、とても自然です。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene7_3.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        }
+      ]
+    },
+    // ========================================
+    // シーン8: 特徴3 - 音声の自動同期
+    // ========================================
+    {
+      id: "scene8",
+
+      slide: {
+        type: 'text',
+        title: '特徴③',
+        content: '音声の自動同期\n\n時間設定が不要',
+        fontSize: 55,
+        backgroundColor: '#16213e',
+        textColor: '#ffffff'
+      },
+
+      character: {
+        id: 'narrator'
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: '3つ目の特徴は、音声ファイルの長さを自動で判定することです。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene8_1.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: '音声ファイルを指定するだけで、長さを自動取得します。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene8_2.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: '各スライドの表示時間や、字幕の表示時間などはセグメント内の音声ファイルの長さから自動計算されます。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene8_3.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: '動画全体の長さまで、すべて自動で決まるので、手動で時間を計算する必要はありません。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene8_4.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        },
+        {
+          subtitle: {
+            text: 'また音声ファイルを差し替えても、自動で調整されるので便利です。',
+            fontSize: 26
+          },
+          audio: {
+            voiceover: "/audio/scene8_5.wav",
+            delayFrames: 20,
+            volume: 1.0
+          }
+        }
+      ]
+    },
   ]
 };
 

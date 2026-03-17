@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "remotion preview",
-    "build": "remotion render",
+    "build": "remotion render ExplanationVideo out/video.mp4",
     "upgrade": "remotion upgrade"
   },
   "keywords": [],

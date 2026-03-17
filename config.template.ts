@@ -10,13 +10,15 @@ export const videoConfig: VideoConfig = {
   // ========================================
   title: "動画タイトル",
   fps: 30,                    // フレームレート（通常は30）
-  durationInFrames: 600,      // 総フレーム数（600 = 20秒）
+  // durationInFrames: 600,   // 総フレーム数（省略すると全シーンの合計から自動計算）
   width: 1920,                // 動画の幅
   height: 1080,               // 動画の高さ
 
   // ========================================
   // 背景画像（オプション）
   // ========================================
+  // 推奨サイズ: 1920 × 1080px（動画の解像度と同じ）
+  // 形式: PNG または JPG
   backgroundImage: "/backgrounds/your-background.png",
 
   // ========================================
@@ -88,24 +90,18 @@ export const videoConfig: VideoConfig = {
     // ----------------------------------------
     {
       id: "opening",
-      startFrame: 0,           // 開始フレーム（0 = 最初から）
-      durationInFrames: 150,   // このシーンの長さ（150 = 5秒）
+      startFrame: 0,           // 最初のシーンのみ指定（以降は自動計算）
+      // durationInFrames: 150,   // 省略すると音声の長さから自動計算されます
 
       // スライド設定
       slide: {
         type: 'text',          // 'text' | 'image' | 'pdf'
         title: 'イントロ',     // 副題（左上に表示、オプション）
-        content: 'タイトル',   // メインコンテンツ
+        content: 'タイトル\n複数行も可能',   // \nで改行可能
+        fontSize: 80,          // テキストのフォントサイズ（type: 'text'の場合、オプション、デフォルト: 80）
         backgroundColor: '#1a1a2e',
         textColor: '#ffffff'
         // backgroundImage: '/slides/bg.png'  // スライド専用背景（オプション）
-      },
-
-      // 字幕設定
-      subtitle: {
-        text: 'ここに字幕テキストを入力します',
-        color: '#ffffff',      // オプション（デフォルト: 白）
-        fontSize: 24           // オプション（デフォルト: 24）
       },
 
       // キャラクター設定
@@ -113,11 +109,34 @@ export const videoConfig: VideoConfig = {
         id: 'narrator'         // charactersで定義したID
       },
 
-      // 音声設定（オプション）
-      audio: {
-        voiceover: "/audio/scene1.mp3",  // ナレーション音声（MP3推奨）
-        volume: 1.0                       // 音量 0.0～1.0
-      }
+      // セグメント設定（オプション、字幕と音声のペア、複数設定可能で順次再生）
+      segments: [
+        {
+          subtitle: {
+            text: 'ここに字幕テキストを入力します',
+            color: '#ffffff',      // オプション（デフォルト: 白）
+            fontSize: 24           // オプション（デフォルト: 24）
+          },
+          audio: {
+            voiceover: "/audio/scene1.mp3",    // ナレーション音声（MP3, WAV推奨）
+            // durationInFrames: 75,           // 省略すると音声ファイルから自動取得
+            delayFrames: 0,                    // 開始遅延（フレーム数、オプション、デフォルト: 0）
+            volume: 1.0                         // 音量 0.0～1.0（オプション、デフォルト: 1.0）
+          }
+        },
+        {
+          subtitle: {
+            text: '2つ目の字幕テキスト',
+            fontSize: 24
+          },
+          audio: {
+            voiceover: "/audio/scene1-2.mp3",  // 2つ目の音声（順次再生）
+            // durationInFrames: 75,           // 省略すると音声ファイルから自動取得
+            delayFrames: 10,                   // 前の音声終了後10フレーム待ってから再生
+            volume: 1.0
+          }
+        }
+      ]
     },
 
     // ----------------------------------------
@@ -125,8 +144,7 @@ export const videoConfig: VideoConfig = {
     // ----------------------------------------
     {
       id: "scene2",
-      startFrame: 150,         // 5秒後から開始
-      durationInFrames: 150,   // 5秒間
+      // startFrameとdurationInFramesは省略すると自動計算されます
 
       slide: {
         type: 'image',
@@ -135,18 +153,21 @@ export const videoConfig: VideoConfig = {
         backgroundColor: '#16213e'
       },
 
-      subtitle: {
-        text: '画像を使った説明ができます'
-      },
-
       character: {
         id: 'narrator'
       },
 
-      audio: {
-        voiceover: "/audio/scene2.mp3",
-        volume: 1.0
-      }
+      segments: [
+        {
+          subtitle: {
+            text: '画像を使った説明ができます'
+          },
+          audio: {
+            voiceover: "/audio/scene2.mp3"
+            // durationInFrames, volume, delayFramesは省略可能
+          }
+        }
+      ]
     },
 
     // ----------------------------------------
@@ -154,8 +175,6 @@ export const videoConfig: VideoConfig = {
     // ----------------------------------------
     {
       id: "scene3",
-      startFrame: 300,         // 10秒後から開始
-      durationInFrames: 150,   // 5秒間
 
       slide: {
         type: 'pdf',
@@ -164,49 +183,80 @@ export const videoConfig: VideoConfig = {
         pdfPage: 1             // 表示するPDFのページ番号
       },
 
-      subtitle: {
-        text: 'PDFの資料も表示できます'
+      character: {
+        id: 'narrator'
+      },
+
+      segments: [
+        {
+          subtitle: {
+            text: 'PDFの資料も表示できます'
+          },
+          audio: {
+            voiceover: "/audio/scene3.mp3"
+          }
+        }
+      ]
+    },
+
+    // ----------------------------------------
+    // シーン4: 動画スライドの例（15秒～20秒）
+    // ----------------------------------------
+    {
+      id: "scene4",
+
+      slide: {
+        type: 'video',
+        title: 'デモ動画',
+        videoPath: '/videos/demo.mp4'  // 動画ファイルのパス（ループ再生されます）
       },
 
       character: {
         id: 'narrator'
       },
 
-      audio: {
-        voiceover: "/audio/scene3.mp3",
-        volume: 1.0
-      }
+      segments: [
+        {
+          subtitle: {
+            text: '動画も表示できます。動画はループ再生されます。'
+          },
+          audio: {
+            voiceover: "/audio/scene4.mp3"
+          }
+        }
+      ]
     },
 
     // ----------------------------------------
-    // シーン4: エンディング（15秒～20秒）
+    // シーン5: エンディング（20秒～25秒）
     // ----------------------------------------
     {
       id: "ending",
-      startFrame: 450,         // 15秒後から開始
-      durationInFrames: 150,   // 5秒間
 
       slide: {
         type: 'text',
         title: 'まとめ',
-        content: 'ご視聴ありがとうございました',
+        content: 'ご視聴\nありがとうございました',
+        fontSize: 75,
         backgroundColor: '#0f3460',
         textColor: '#ffffff'
-      },
-
-      subtitle: {
-        text: 'チャンネル登録をお願いします！',
-        fontSize: 28
       },
 
       character: {
         id: 'narrator'
       },
 
-      audio: {
-        voiceover: "/audio/scene4.mp3",
-        volume: 1.0
-      }
+      segments: [
+        {
+          subtitle: {
+            text: 'チャンネル登録をお願いします！',
+            fontSize: 28
+          },
+          audio: {
+            voiceover: "/audio/scene4.mp3"
+          }
+        }
+      ]
     }
   ]
 };
